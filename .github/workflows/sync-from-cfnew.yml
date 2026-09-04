@@ -174,7 +174,7 @@ jobs:
             -F "metadata=@metadata.json;type=application/json" \
             -F "_worker.js=@_worker.js;type=application/javascript+module")
           echo "$UPLOAD"
-          echo "$UPLOAD" | grep -q '"success":true' || { echo "::error::脚本上传失败"; exit 1; }
+          echo "$UPLOAD" | grep -Eq '"success"[[:space:]]*:[[:space:]]*true' || { echo "::error::脚本上传失败"; exit 1; }
 
           echo ">> 设置 UUID 密钥 ..."
           SECRET=$(curl -sS -X PUT "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/workers/scripts/cfnew-terminal/secrets" \
@@ -182,7 +182,7 @@ jobs:
             -H "Content-Type: application/json" \
             -d "{\"name\":\"u\",\"text\":\"${UUID}\",\"type\":\"secret_text\"}")
           echo "$SECRET"
-          echo "$SECRET" | grep -q '"success":true' || { echo "::error::设置密钥失败"; exit 1; }
+          echo "$SECRET" | grep -Eq '"success"[[:space:]]*:[[:space:]]*true' || { echo "::error::设置密钥失败"; exit 1; }
 
           echo ">> 部署完成"
 
