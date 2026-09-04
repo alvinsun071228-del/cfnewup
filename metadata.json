@@ -1,0 +1,8 @@
+{
+  "main_module": "_worker.js",
+  "compatibility_date": "2026-01-20",
+  "compatibility_flags": [],
+  "bindings": [
+    {"type": "kv_namespace", "name": "C", "namespace_id": "84091bbddedd44dbbee4615fc0ce5b0c"}
+  ]
+}
