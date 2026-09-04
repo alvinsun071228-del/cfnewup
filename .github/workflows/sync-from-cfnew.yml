@@ -143,6 +143,49 @@ jobs:
             echo "✗ 警告：版本记录文件可能未正确创建"
           fi
       
+      - name: 部署到 Cloudflare Workers
+        if: steps.check_version.outputs.need_update == 'true'
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          KV_NAMESPACE: ${{ secrets.KV_NAMESPACE }}
+          UUID: ${{ secrets.UUID }}
+        run: |
+          set -e
+          if [ ! -f "_worker.js" ]; then
+            echo "::error::未找到 _worker.js"
+            exit 1
+          fi
+
+          cat > metadata.json <<EOF
+          {
+            "main_module": "_worker.js",
+            "compatibility_date": "2026-01-20",
+            "compatibility_flags": [],
+            "bindings": [
+              {"type": "kv_namespace", "name": "C", "namespace_id": "${KV_NAMESPACE}"}
+            ]
+          }
+          EOF
+
+          echo ">> 上传 Worker 脚本 ..."
+          UPLOAD=$(curl -sS -X PUT "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/workers/scripts/cfnew-terminal" \
+            -H "Authorization: Bearer ${CF_API_TOKEN}" \
+            -F "metadata=@metadata.json;type=application/json" \
+            -F "_worker.js=@_worker.js;type=application/javascript+module")
+          echo "$UPLOAD"
+          echo "$UPLOAD" | grep -q '"success":true' || { echo "::error::脚本上传失败"; exit 1; }
+
+          echo ">> 设置 UUID 密钥 ..."
+          SECRET=$(curl -sS -X PUT "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/workers/scripts/cfnew-terminal/secrets" \
+            -H "Authorization: Bearer ${CF_API_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "{\"name\":\"u\",\"text\":\"${UUID}\",\"type\":\"secret_text\"}")
+          echo "$SECRET"
+          echo "$SECRET" | grep -q '"success":true' || { echo "::error::设置密钥失败"; exit 1; }
+
+          echo ">> 部署完成"
+
       - name: 提交并推送更改
         if: steps.check_version.outputs.need_update == 'true'
         run: |
